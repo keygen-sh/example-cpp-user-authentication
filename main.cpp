@@ -12,7 +12,7 @@ size_t wfun(char *contents, size_t size, size_t nmemb, void *userp)
     return size * nmemb;
 }
 
-std::string generate_token(std::string account_id, const char *email, const char *password)
+std::string generate_token(std::string account_id, std::string email, std::string password)
 {
   std::string buf;
 
@@ -26,8 +26,8 @@ std::string generate_token(std::string account_id, const char *email, const char
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, wfun);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
 
-    curl_easy_setopt(curl, CURLOPT_USERNAME, email);
-    curl_easy_setopt(curl, CURLOPT_PASSWORD, password);
+    curl_easy_setopt(curl, CURLOPT_USERNAME, email.c_str());
+    curl_easy_setopt(curl, CURLOPT_PASSWORD, password.c_str());
 
     auto res = curl_easy_perform(curl);
     curl_easy_cleanup(curl);
@@ -48,7 +48,7 @@ std::string get_current_user(std::string account_id, std::string token)
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, wfun);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
 
-    auto headers = curl_slist_append(NULL, (std::string("Authorization: Bearer ") + token).c_str());
+    auto headers = curl_slist_append(nullptr, (std::string("Authorization: Bearer ") + token).c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
     auto res = curl_easy_perform(curl);
@@ -70,7 +70,7 @@ std::string list_licenses(std::string account_id, std::string token)
     curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, wfun);
     curl_easy_setopt(curl, CURLOPT_WRITEDATA, &buf);
 
-    auto headers = curl_slist_append(NULL, (std::string("Authorization: Bearer ") + token).c_str());
+    auto headers = curl_slist_append(nullptr, (std::string("Authorization: Bearer ") + token).c_str());
     curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
 
     auto res = curl_easy_perform(curl);
@@ -82,14 +82,24 @@ std::string list_licenses(std::string account_id, std::string token)
 
 int main(void)
 {
+  if (!getenv("KEYGEN_ACCOUNT_ID"))
+  {
+    std::cerr << "Environment variable KEYGEN_ACCOUNT_ID is missing"
+              << std::endl;
+
+    return 1;
+  }
+
   curl_global_init(CURL_GLOBAL_ALL);
 
   std::string account_id = getenv("KEYGEN_ACCOUNT_ID");
+  std::string user_email = "test@keygen.example";
+  std::string user_pwd = "secret";
   std::string token = "";
 
   // Authenticate and create an API token
   {
-    auto buf = generate_token(account_id, "test@keygen.example", "secret");
+    auto buf = generate_token(account_id, user_email, user_pwd);
     auto body = json::parse(buf);
     if (body.contains("data"))
     {
